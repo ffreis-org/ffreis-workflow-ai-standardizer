@@ -5,7 +5,8 @@ BINARY := standardizer
 BIN_DIR := bin
 
 .PHONY: help build test lint vet fmt fmt-check clean security \
-        secrets-scan-staged lefthook-bootstrap lefthook-install hooks setup
+        secrets-scan-staged lefthook-bootstrap lefthook-install hooks setup \
+        coverage-gate integration-coverage-gate quality-gates
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -34,6 +35,19 @@ security: ## Run govulncheck (dependency vulnerability scan)
 	@command -v govulncheck >/dev/null 2>&1 && govulncheck ./... || \
 	  echo "govulncheck not found; install with: go install golang.org/x/vuln/cmd/govulncheck@latest"
 
+COVERAGE_MIN ?= 75
+
+coverage-gate: ## Run tests with coverage and fail if below COVERAGE_MIN
+	@COVERAGE_MIN="$(COVERAGE_MIN)" ./scripts/hooks/check_coverage_gate.sh
+
+integration-coverage-gate: ## Run //go:build integration tests with coverage (no-op if none exist)
+	@COVERAGE_MIN="$(COVERAGE_MIN)" ./scripts/hooks/check_integration_coverage_gate.sh
+
+quality-gates: ## Run strict pre-push quality gates (test + coverage + govulncheck)
+	$(MAKE) test
+	$(MAKE) coverage-gate
+	$(MAKE) security
+
 clean: ## Remove build artifacts
 	rm -rf $(BIN_DIR) output/
 
@@ -43,9 +57,18 @@ secrets-scan-staged: ## Scan staged files for secrets
 	gitleaks protect --staged --redact
 
 
-PLATFORM_STANDARDS_SHA := 3c787edb4e96ddea2e86b2add2c32139685e8db7  # v1.2.1
+# Comment kept on its own line, not trailing `:=` — GNU Make keeps any
+# whitespace before a same-line `#` as part of the variable's value, which
+# breaks the curl URLs built from it below (found live across many fleet
+# repos sharing this pin pattern; fixed here while bumping it).
+# v1.10.0
+PLATFORM_STANDARDS_SHA := 273842219190739c6b462c21331b234271446b13
 PLATFORM_STANDARDS_RAW := https://raw.githubusercontent.com/FelipeFuhr/ffreis-platform-standards
 
+# check_coverage_gate.sh / check_integration_coverage_gate.sh are NOT fetched
+# here: they don't exist upstream in ffreis-platform-standards yet (checked at
+# this pin), so they're vendored directly in scripts/hooks/ instead. See the
+# .gitignore comment above scripts/hooks/ for how they stay tracked.
 HOOK_SCRIPTS := \
 	check_merge_markers.sh \
 	check_large_files.sh \

@@ -8,17 +8,17 @@ import (
 )
 
 type TaskConfig struct {
-	Name        string      `yaml:"name"`
-	Description string      `yaml:"description"`
-	Model       string      `yaml:"model"`
-	Context     []string    `yaml:"context"`
-	SourceGlobs []string    `yaml:"source_globs"`
-	MaxDiffTokens int       `yaml:"max_diff_tokens"`
-	Output      OutputConfig `yaml:"output"`
+	Name          string       `yaml:"name"`
+	Description   string       `yaml:"description"`
+	Model         string       `yaml:"model"`
+	Context       []string     `yaml:"context"`
+	SourceGlobs   []string     `yaml:"source_globs"`
+	MaxDiffTokens int          `yaml:"max_diff_tokens"`
+	Output        OutputConfig `yaml:"output"`
 }
 
 type OutputConfig struct {
-	Type         string `yaml:"type"`          // pr | issue | artifact | stdout
+	Type         string `yaml:"type"` // pr | issue | artifact | stdout
 	BranchPrefix string `yaml:"branch_prefix"`
 	SkipMarker   string `yaml:"skip_marker"`
 }

@@ -21,7 +21,7 @@ jobs:
   fmt:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-fmt.yml@2253ff2eda0a3d65f9eaca1a3ae117d32a449e20 # v1.2.0
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-fmt.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       working-directory: .
 
@@ -29,14 +29,14 @@ jobs:
     permissions:
       contents: read
       pull-requests: read # scan-fix(permissions-mirror): go-lint.yml needs this for golangci-lint-action
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-lint.yml@2253ff2eda0a3d65f9eaca1a3ae117d32a449e20 # v1.2.0
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-lint.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       working-directory: .
 
   build:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-build.yml@2253ff2eda0a3d65f9eaca1a3ae117d32a449e20 # v1.2.0
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-build.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       working-directory: .
 
@@ -45,9 +45,27 @@ jobs:
     permissions:
       contents: read
       id-token: write # scan-fix(permissions-mirror): go-test.yml needs this for L2 S3 cache OIDC
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-test.yml@2253ff2eda0a3d65f9eaca1a3ae117d32a449e20 # v1.2.0
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-test.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       working-directory: .
+
+  coverage:
+    if: ${{ !github.event.pull_request.draft }}
+    permissions:
+      contents: read
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-coverage.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
+    with:
+      working-directory: .
+      coverage-threshold: 75
+
+  integration-coverage:
+    if: ${{ !github.event.pull_request.draft }}
+    permissions:
+      contents: read
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-integration-coverage.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
+    with:
+      working-directory: .
+      coverage-threshold: 75
 
   # Validates all task YAML configs parse and have required fields.
   # This catches malformed tasks before they reach production.

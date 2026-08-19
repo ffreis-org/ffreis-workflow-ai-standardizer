@@ -1,10 +1,17 @@
 bin/
-output/
+/output/
 *.log
 .env
 *.local.yaml
 
-scripts/hooks/
+# Fetched fresh by `make hook-scripts` from ffreis-platform-standards — not
+# authored here. Listed individually (not `scripts/hooks/`) so repo-authored
+# scripts in the same directory can be tracked.
+scripts/hooks/check_merge_markers.sh
+scripts/hooks/check_large_files.sh
+scripts/hooks/check_binary_files.sh
+scripts/hooks/check_commit_msg.sh
+scripts/hooks/check_required_tools.sh
 scripts/bootstrap_lefthook.sh
 
 # SonarQube scanner artifacts

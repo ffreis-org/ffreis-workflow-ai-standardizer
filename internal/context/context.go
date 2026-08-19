@@ -1,6 +1,9 @@
 package context
 
 import (
+	// stdctx: this package is itself named "context", so the stdlib package
+	// needs an alias to avoid shadowing.
+	stdctx "context"
 	"fmt"
 	"log/slog"
 )
@@ -21,22 +24,22 @@ func NewBuilder(repoDir, owner, name string, logger *slog.Logger) *Builder {
 }
 
 // Build gathers the requested context keys and returns a Data map.
-func (b *Builder) Build(keys []string, globs []string, maxDiffTokens int) (Data, error) {
+func (b *Builder) Build(ctx stdctx.Context, keys []string, globs []string, maxDiffTokens int) (Data, error) {
 	d := make(Data)
 	for _, key := range keys {
 		var val string
 		var err error
 		switch key {
 		case "agents_md":
-			val, err = b.agentsMD()
+			val, err = b.agentsMD(ctx)
 		case "diff_since_agents_update":
-			val, err = b.diffSinceAgentsUpdate(globs, maxDiffTokens)
+			val, err = b.diffSinceAgentsUpdate(ctx, globs, maxDiffTokens)
 		case "changed_files_list":
-			val, err = b.changedFilesList(globs)
+			val, err = b.changedFilesList(ctx, globs)
 		case "readme":
-			val, err = b.readme()
+			val, err = b.readme(ctx)
 		case "directory_tree":
-			val, err = b.directoryTree()
+			val, err = b.directoryTree(ctx)
 		default:
 			return nil, fmt.Errorf("unknown context key: %s", key)
 		}

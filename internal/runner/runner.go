@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/felipefuhr/ffreis-workflow-ai-standardizer/internal/config"
 	gocontext "github.com/felipefuhr/ffreis-workflow-ai-standardizer/internal/context"
@@ -170,7 +169,7 @@ func processRepoEntry(
 	}
 
 	repoURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, name)
-	if err := gocontext.Clone(repoURL, tmpDir); err != nil {
+	if err := cloneRepo(ctx, repoURL, tmpDir); err != nil {
 		opts.Logger.Warn("clone failed", "repo", repoEntry.Repo, "error", err)
 		return []Result{{Repo: repoEntry.Repo, Status: "error", Detail: "clone failed: " + err.Error()}}, tmpDir, err
 	}
@@ -212,7 +211,7 @@ func processRepo(ctx context.Context, opts Options, p processRepoParams) Result 
 	logger := opts.Logger.With("repo", p.repoEntry.Repo, "task", p.task.Name)
 
 	builder := gocontext.NewBuilder(p.repoDir, p.owner, p.name, logger)
-	data, err := builder.Build(p.task.Context, p.task.SourceGlobs, p.task.MaxDiffTokens)
+	data, err := builder.Build(ctx, p.task.Context, p.task.SourceGlobs, p.task.MaxDiffTokens)
 	if err != nil {
 		return Result{Repo: base.Repo, Task: base.Task, Status: "error", Detail: "context: " + err.Error()}
 	}
@@ -288,6 +287,11 @@ func loadTaskConfigs(tasksDir string) (map[string]config.TaskConfig, error) {
 	return cfgs, nil
 }
 
+// cloneRepo is a package-level var (not a plain func call to gocontext.Clone)
+// so tests can substitute a fake that materializes a local fixture directory
+// instead of performing a real network clone.
+var cloneRepo = gocontext.Clone
+
 func buildGHClient(ctx context.Context, token string) *github.Client {
 	if token == "" {
 		return nil
@@ -295,5 +299,3 @@ func buildGHClient(ctx context.Context, token string) *github.Client {
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	return github.NewClient(oauth2.NewClient(ctx, ts))
 }
-
-var _ = time.Now

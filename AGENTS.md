@@ -40,6 +40,45 @@ or locally inside a repo's own CI pipeline.
 - **`--dry-run` prints the rendered prompt and skips LLM calls, git writes, and PR
   creation.** Use it to validate context gathering and prompt rendering without cost.
 
+- **`.gitignore`'s `output/` pattern must stay anchored (`/output/`).** An
+  earlier unanchored `output/` line also matched `internal/output/` (the Go
+  package `cmd/standardizer/main.go` imports), so that package's source files
+  were never committed — every fresh checkout, including CI, failed to build
+  with "no required module provides package .../internal/output" until this
+  was caught and fixed. If you ever add a directory literally named `output`
+  anywhere in the tree, double-check the pattern doesn't shadow it again.
+
+- **`internal/output.runGit` and `internal/runner.cloneRepo` are package-level
+  vars, not plain funcs**, specifically so tests can substitute a fake and
+  exercise git/clone error paths without spawning real processes or touching
+  the network. Keep this pattern for any future external-process call site
+  you want to unit test.
+
+- **`GITHUB_REPOSITORY` and `GITHUB_STEP_SUMMARY` are ambient in every GitHub
+  Actions job.** A test asserting "no env fallback" for local-mode repo-slug
+  resolution must `t.Setenv("GITHUB_REPOSITORY", "")` explicitly — otherwise it
+  passes locally (where the var is unset) and fails only in CI, where the
+  runner injects the real value. `internal/runner.runLocalMode` and
+  `cmd/standardizer.writeStepSummary` both read these two vars directly via
+  `os.Getenv`.
+
+- **All `exec.Command`/`exec.CommandContext` call sites take a `context.Context`
+  first param** (`internal/context.Clone`, `Builder.run`, `Builder.directoryTree`)
+  so a caller-provided deadline/cancellation can abort a hung git/find
+  subprocess. `internal/context` is itself a package named `context`, so files
+  in it that need the stdlib package alias it (`stdctx "context"`); test files
+  in the same package can import it unaliased since there's no self-referencing
+  identifier to collide with.
+
+- **`.golangci.yml` excludes gosec G304 (file inclusion via variable) and G204
+  (subprocess launched with variable) repo-wide**, not with inline `#nosec`
+  comments — every instance is a CLI-flag-supplied config/task path or an
+  internally-built `git`/`find` argv (never shell-string, never network input).
+  See the config's inline comment for the full file list before extending the
+  exclusion to new code; if a future finding involves genuinely
+  externally-controlled input, fix that one properly instead of assuming the
+  blanket exclusion covers it.
+
 ## Structure
 
 ```
@@ -71,6 +110,22 @@ make build
 # Full central run
 LLM_API_KEY=sk-... GH_TOKEN=ghp_... ./bin/standardizer run
 ```
+
+## Testing
+
+```bash
+make test              # go test -race -shuffle=on ./...
+make coverage-gate     # go test ./... + fail if total coverage < 75% (COVERAGE_MIN)
+make quality-gates     # test + coverage-gate + security (govulncheck) — pre-push tier
+```
+
+`coverage-gate`/`integration-coverage-gate` shell scripts are vendored
+directly in `scripts/hooks/` (not fetched from `ffreis-platform-standards`
+like the other hook scripts) because they didn't exist upstream yet as of the
+pinned `PLATFORM_STANDARDS_SHA`. If a future bump of that pin adds them
+upstream, switch these two names from vendored files to `HOOK_SCRIPTS`
+fetch-list entries instead of carrying both a vendored copy and a fetched
+copy.
 
 ## Adding a new task
 

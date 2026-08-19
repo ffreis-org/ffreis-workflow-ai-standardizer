@@ -84,4 +84,3 @@ func (c *Client) WithModel(model string) *Client {
 	clone.model = model
 	return &clone
 }
-

@@ -12,7 +12,7 @@ type ReposConfig struct {
 }
 
 type RepoEntry struct {
-	Repo          string   `yaml:"repo"`           // "owner/name"
+	Repo          string   `yaml:"repo"` // "owner/name"
 	Tasks         []string `yaml:"tasks"`
 	ModelOverride string   `yaml:"model_override"` // optional
 	Branch        string   `yaml:"branch"`         // default branch, optional (default: main)
