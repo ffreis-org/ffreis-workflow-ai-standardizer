@@ -1,6 +1,9 @@
 package context
 
 import (
+	// stdctx: this package is itself named "context", so the stdlib package
+	// needs an alias to avoid shadowing.
+	stdctx "context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -37,11 +40,13 @@ func ValidateRepoURL(u string) error {
 // `--` separator is also emitted before the URL so git treats a value
 // starting with `-` as a positional argument rather than a flag, even if the
 // allowlist is later relaxed.
-func Clone(repoURL, destDir string) error {
+func Clone(ctx stdctx.Context, repoURL, destDir string) error {
 	if err := ValidateRepoURL(repoURL); err != nil {
 		return fmt.Errorf("git clone: %w", err)
 	}
-	cmd := exec.Command("git", "clone", "--depth=200", "--no-single-branch", "--", repoURL, destDir)
+	// scan-fix(golangci:noctx): exec.CommandContext — lets a caller-provided
+	// deadline/cancellation abort a hung clone instead of blocking forever.
+	cmd := exec.CommandContext(ctx, "git", "clone", "--depth=200", "--no-single-branch", "--", repoURL, destDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone %s: %w\n%s", repoURL, err, out)
@@ -49,15 +54,17 @@ func Clone(repoURL, destDir string) error {
 	return nil
 }
 
-func (b *Builder) run(args ...string) (string, error) {
-	cmd := exec.Command(args[0], args[1:]...)
+func (b *Builder) run(ctx stdctx.Context, args ...string) (string, error) {
+	// scan-fix(golangci:noctx): exec.CommandContext — same deadline/cancellation
+	// rationale as Clone above.
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Dir = b.repoDir
 	out, err := cmd.Output()
 	return strings.TrimSpace(string(out)), err
 }
 
-func (b *Builder) agentsMD() (string, error) {
-	content, err := b.run("git", "show", "HEAD:AGENTS.md")
+func (b *Builder) agentsMD(ctx stdctx.Context) (string, error) {
+	content, err := b.run(ctx, "git", "show", "HEAD:AGENTS.md")
 	if err != nil {
 		// File may not exist yet.
 		return "", nil
@@ -67,16 +74,16 @@ func (b *Builder) agentsMD() (string, error) {
 
 // agentsMDCommitSHA returns the SHA of the last commit that touched AGENTS.md.
 // Returns "" if AGENTS.md has never been committed.
-func (b *Builder) agentsMDCommitSHA() (string, error) {
-	sha, err := b.run("git", "log", "-1", "--format=%H", "--", "AGENTS.md")
+func (b *Builder) agentsMDCommitSHA(ctx stdctx.Context) (string, error) {
+	sha, err := b.run(ctx, "git", "log", "-1", "--format=%H", "--", "AGENTS.md")
 	if err != nil || sha == "" {
 		return "", nil
 	}
 	return sha, nil
 }
 
-func (b *Builder) diffSinceAgentsUpdate(globs []string, maxDiffTokens int) (string, error) {
-	sha, err := b.agentsMDCommitSHA()
+func (b *Builder) diffSinceAgentsUpdate(ctx stdctx.Context, globs []string, maxDiffTokens int) (string, error) {
+	sha, err := b.agentsMDCommitSHA(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -86,7 +93,7 @@ func (b *Builder) diffSinceAgentsUpdate(globs []string, maxDiffTokens int) (stri
 
 	args := []string{"git", "diff", sha + "..HEAD", "--"}
 	args = append(args, globs...)
-	diff, err := b.run(args...)
+	diff, err := b.run(ctx, args...)
 	if err != nil {
 		// No diff output is fine (exit 0 with empty output).
 		diff = ""
@@ -97,8 +104,8 @@ func (b *Builder) diffSinceAgentsUpdate(globs []string, maxDiffTokens int) (stri
 	return truncateToTokens(diff, maxDiffTokens), nil
 }
 
-func (b *Builder) changedFilesList(globs []string) (string, error) {
-	sha, err := b.agentsMDCommitSHA()
+func (b *Builder) changedFilesList(ctx stdctx.Context, globs []string) (string, error) {
+	sha, err := b.agentsMDCommitSHA(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -107,7 +114,7 @@ func (b *Builder) changedFilesList(globs []string) (string, error) {
 	}
 	args := []string{"git", "log", sha + "..HEAD", "--name-only", "--format=", "--"}
 	args = append(args, globs...)
-	out, err := b.run(args...)
+	out, err := b.run(ctx, args...)
 	if err != nil || out == "" {
 		return "(none)", nil
 	}
@@ -124,9 +131,9 @@ func (b *Builder) changedFilesList(globs []string) (string, error) {
 	return strings.Join(lines, "\n"), nil
 }
 
-func (b *Builder) readme() (string, error) {
+func (b *Builder) readme(ctx stdctx.Context) (string, error) {
 	for _, name := range []string{"README.md", "README", "readme.md"} {
-		content, err := b.run("git", "show", "HEAD:"+name)
+		content, err := b.run(ctx, "git", "show", "HEAD:"+name)
 		if err == nil {
 			return content, nil
 		}
@@ -134,8 +141,10 @@ func (b *Builder) readme() (string, error) {
 	return "(no README found)", nil
 }
 
-func (b *Builder) directoryTree() (string, error) {
-	out, err := exec.Command("find", b.repoDir,
+func (b *Builder) directoryTree(ctx stdctx.Context) (string, error) {
+	// scan-fix(golangci:noctx): exec.CommandContext — same deadline/cancellation
+	// rationale as Clone above.
+	out, err := exec.CommandContext(ctx, "find", b.repoDir,
 		"-maxdepth", "3",
 		"-not", "-path", "*/.git/*",
 		"-not", "-path", "*/vendor/*",

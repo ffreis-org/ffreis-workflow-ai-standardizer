@@ -264,11 +264,22 @@ func writeStepSummary(results []runner.Result) {
 	if path == "" {
 		return
 	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// scan-fix(gosec:G302,G703): 0600 — the step summary is written for this
+	// job's own eyes only, no reason to grant group/other read. #nosec G703 —
+	// path is $GITHUB_STEP_SUMMARY, a file path GitHub Actions itself creates
+	// and injects into every job's environment (not user/network input); this
+	// function is only ever called from a GitHub Actions runner.
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600) //nolint:gosec // G703: path is the GitHub-Actions-provided GITHUB_STEP_SUMMARY, not external input
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() {
+		// scan-fix(golangci:errcheck): name+log the close error — best-effort,
+		// nothing meaningful to do differently on a summary-file close failure.
+		if cerr := f.Close(); cerr != nil {
+			slog.Warn("close step summary file", "error", cerr)
+		}
+	}()
 
 	counts := map[string]int{}
 	for _, r := range results {
@@ -280,10 +291,16 @@ func writeStepSummary(results []runner.Result) {
 	sb.WriteString("| Repo | Task | Status | Detail |\n")
 	sb.WriteString("|------|------|--------|--------|\n")
 	for _, r := range results {
-		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", r.Repo, r.Task, r.Status, r.Detail))
+		// scan-fix(staticcheck:QF1012): fmt.Fprintf(&sb, ...) instead of
+		// sb.WriteString(fmt.Sprintf(...))
+		fmt.Fprintf(&sb, "| %s | %s | %s | %s |\n", r.Repo, r.Task, r.Status, r.Detail)
 	}
-	sb.WriteString(fmt.Sprintf("\n**%d pr_opened / %d no_changes / %d skipped / %d errors**\n",
-		counts["pr_opened"], counts["no_changes"], counts["skipped"], counts["error"]))
+	fmt.Fprintf(&sb, "\n**%d pr_opened / %d no_changes / %d skipped / %d errors**\n",
+		counts["pr_opened"], counts["no_changes"], counts["skipped"], counts["error"])
 
-	fmt.Fprint(f, sb.String())
+	// scan-fix(golangci:errcheck): check the write error — log rather than
+	// silently drop it.
+	if _, werr := fmt.Fprint(f, sb.String()); werr != nil {
+		slog.Warn("write step summary", "error", werr)
+	}
 }

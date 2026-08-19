@@ -201,6 +201,11 @@ func TestRun_LocalMode_NoRepoSlugOrEnv_ReturnsError(t *testing.T) {
 	writeTask(t, dir, "task-a", "readme", "stdout", false)
 	server := fakeLLMServer(t, "unused")
 
+	// scan-fix(go:ci-env-leak): blank GITHUB_REPOSITORY — it's ambient in every
+	// GitHub Actions job, so without this the test silently picked up the real
+	// repo slug from the CI environment and failed only in CI, never locally.
+	t.Setenv("GITHUB_REPOSITORY", "")
+
 	opts := baseOptions(dir, server)
 	opts.LocalDir = setupGitRepo(t)
 
@@ -475,7 +480,7 @@ func TestRun_TasksDirNotFound_ReturnsError(t *testing.T) {
 // --- Run: central mode (cloneRepo faked to avoid real network calls) ---
 
 // withFakeClone substitutes cloneRepo for the duration of the test.
-func withFakeClone(t *testing.T, fake func(repoURL, destDir string) error) {
+func withFakeClone(t *testing.T, fake func(ctx context.Context, repoURL, destDir string) error) {
 	t.Helper()
 	orig := cloneRepo
 	cloneRepo = fake
@@ -506,7 +511,7 @@ func TestRun_CentralMode_InvalidRepoSlug_SkipsEntrySilently(t *testing.T) {
 		t.Fatalf("write repos.yaml: %v", err)
 	}
 
-	withFakeClone(t, func(repoURL, destDir string) error {
+	withFakeClone(t, func(ctx context.Context, repoURL, destDir string) error {
 		t.Fatal("cloneRepo should not be called for a malformed repo slug")
 		return nil
 	})
@@ -533,7 +538,7 @@ func TestRun_CentralMode_CloneFails_ReturnsErrorResult(t *testing.T) {
 		t.Fatalf("write repos.yaml: %v", err)
 	}
 
-	withFakeClone(t, func(repoURL, destDir string) error {
+	withFakeClone(t, func(ctx context.Context, repoURL, destDir string) error {
 		return errors.New("network unreachable")
 	})
 
@@ -560,7 +565,7 @@ func TestRun_CentralMode_CloneSucceeds_ProcessesTaskAndCleansUpTmpDir(t *testing
 	}
 
 	var clonedInto string
-	withFakeClone(t, func(repoURL, destDir string) error {
+	withFakeClone(t, func(ctx context.Context, repoURL, destDir string) error {
 		if repoURL != "https://github.com/example/repo.git" {
 			t.Errorf("repoURL = %q, want https://github.com/example/repo.git", repoURL)
 		}
@@ -607,7 +612,7 @@ func TestRun_CentralMode_RepoFilter_SkipsNonMatchingRepos(t *testing.T) {
 		t.Fatalf("write repos.yaml: %v", err)
 	}
 
-	withFakeClone(t, func(repoURL, destDir string) error {
+	withFakeClone(t, func(ctx context.Context, repoURL, destDir string) error {
 		fakeRepo := setupGitRepo(t)
 		writeAndCommit(t, fakeRepo, "README.md", "hi", "init")
 		if err := os.RemoveAll(destDir); err != nil {
@@ -640,7 +645,7 @@ func TestRun_CentralMode_TaskNotFoundInTasksDir_ReturnsErrorResult(t *testing.T)
 		t.Fatalf("write repos.yaml: %v", err)
 	}
 
-	withFakeClone(t, func(repoURL, destDir string) error {
+	withFakeClone(t, func(ctx context.Context, repoURL, destDir string) error {
 		fakeRepo := setupGitRepo(t)
 		writeAndCommit(t, fakeRepo, "README.md", "hi", "init")
 		if err := os.RemoveAll(destDir); err != nil {
@@ -687,7 +692,7 @@ func TestRun_CentralMode_ModelOverride_UsedInLLMRequest(t *testing.T) {
 		t.Fatalf("write repos.yaml: %v", err)
 	}
 
-	withFakeClone(t, func(repoURL, destDir string) error {
+	withFakeClone(t, func(ctx context.Context, repoURL, destDir string) error {
 		fakeRepo := setupGitRepo(t)
 		writeAndCommit(t, fakeRepo, "README.md", "hi", "init")
 		if err := os.RemoveAll(destDir); err != nil {

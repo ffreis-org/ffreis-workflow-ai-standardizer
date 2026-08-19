@@ -62,7 +62,7 @@ func TestBuild_UnknownContextKey_ReturnsError(t *testing.T) {
 	writeAndCommit(t, dir, "README.md", "hi", "init")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	_, err := b.Build([]string{"not_a_real_key"}, nil, 0)
+	_, err := b.Build(context.Background(), []string{"not_a_real_key"}, nil, 0)
 	if err == nil || !strings.Contains(err.Error(), "unknown context key") {
 		t.Fatalf("err = %v, want it to mention 'unknown context key'", err)
 	}
@@ -73,7 +73,7 @@ func TestBuild_AgentsMD_ReturnsCommittedContent(t *testing.T) {
 	writeAndCommit(t, dir, "AGENTS.md", "# Agents\n\nBe helpful.", "add AGENTS.md")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"agents_md"}, nil, 0)
+	data, err := b.Build(context.Background(), []string{"agents_md"}, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestBuild_AgentsMD_MissingFile_ReturnsEmptyStringNoError(t *testing.T) {
 	writeAndCommit(t, dir, "README.md", "hi", "init")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"agents_md"}, nil, 0)
+	data, err := b.Build(context.Background(), []string{"agents_md"}, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestBuild_DiffSinceAgentsUpdate_NoHistory_ReturnsPlaceholder(t *testing.T) 
 	writeAndCommit(t, dir, "README.md", "hi", "init") // AGENTS.md never committed
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"diff_since_agents_update"}, []string{"*.go"}, 3000)
+	data, err := b.Build(context.Background(), []string{"diff_since_agents_update"}, []string{"*.go"}, 3000)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestBuild_DiffSinceAgentsUpdate_MatchingChange_ReturnsDiff(t *testing.T) {
 	writeAndCommit(t, dir, "main.go", "package main\n", "add main.go")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"diff_since_agents_update"}, []string{"*.go"}, 3000)
+	data, err := b.Build(context.Background(), []string{"diff_since_agents_update"}, []string{"*.go"}, 3000)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestBuild_DiffSinceAgentsUpdate_NoMatchingChange_ReturnsPlaceholder(t *test
 	writeAndCommit(t, dir, "notes.txt", "unrelated change", "add notes")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"diff_since_agents_update"}, []string{"*.go"}, 3000)
+	data, err := b.Build(context.Background(), []string{"diff_since_agents_update"}, []string{"*.go"}, 3000)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestBuild_DiffSinceAgentsUpdate_TruncatesToTokenBudget(t *testing.T) {
 	writeAndCommit(t, dir, "main.go", strings.Repeat("x", 500)+"\n", "add large main.go")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"diff_since_agents_update"}, []string{"*.go"}, 1) // maxChars = 4
+	data, err := b.Build(context.Background(), []string{"diff_since_agents_update"}, []string{"*.go"}, 1) // maxChars = 4
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestBuild_ChangedFilesList_NoHistory_ReturnsPlaceholder(t *testing.T) {
 	writeAndCommit(t, dir, "README.md", "hi", "init")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"changed_files_list"}, []string{"*.go"}, 0)
+	data, err := b.Build(context.Background(), []string{"changed_files_list"}, []string{"*.go"}, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestBuild_ChangedFilesList_DeduplicatesRepeatedFile(t *testing.T) {
 	writeAndCommit(t, dir, "main.go", "package main\n\nfunc main() {}\n", "update main.go")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"changed_files_list"}, []string{"*.go"}, 0)
+	data, err := b.Build(context.Background(), []string{"changed_files_list"}, []string{"*.go"}, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestBuild_Readme_FindsReadmeMD(t *testing.T) {
 	writeAndCommit(t, dir, "README.md", "# Hello", "add readme")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"readme"}, nil, 0)
+	data, err := b.Build(context.Background(), []string{"readme"}, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestBuild_Readme_MissingFile_ReturnsPlaceholder(t *testing.T) {
 	writeAndCommit(t, dir, "AGENTS.md", "# Agents", "add AGENTS.md")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"readme"}, nil, 0)
+	data, err := b.Build(context.Background(), []string{"readme"}, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestBuild_DirectoryTree_ListsFilesExcludingGitContents(t *testing.T) {
 	writeAndCommit(t, dir, "main.go", "package main\n", "add main.go")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"directory_tree"}, nil, 0)
+	data, err := b.Build(context.Background(), []string{"directory_tree"}, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestBuild_MultipleKeys_PopulatesAllRequested(t *testing.T) {
 	writeAndCommit(t, dir, "AGENTS.md", "# Agents", "add AGENTS.md")
 	b := NewBuilder(dir, "owner", "repo", testLogger())
 
-	data, err := b.Build([]string{"agents_md", "readme", "directory_tree"}, nil, 0)
+	data, err := b.Build(context.Background(), []string{"agents_md", "readme", "directory_tree"}, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

@@ -24,7 +24,9 @@ type RepoResult struct {
 
 // WriteSummary writes the summary JSON to outputDir/summary.json.
 func WriteSummary(outputDir string, summary RunSummary) error {
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	// scan-fix(gosec:G301): 0750 — no reason to grant world access to the run's
+	// own output directory.
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
 	}
 	data, err := json.MarshalIndent(summary, "", "  ")
@@ -32,5 +34,7 @@ func WriteSummary(outputDir string, summary RunSummary) error {
 		return err
 	}
 	path := filepath.Join(outputDir, "summary.json")
-	return os.WriteFile(path, data, 0644)
+	// scan-fix(gosec:G306): 0600 — summary.json has no reason to be group/other
+	// readable.
+	return os.WriteFile(path, data, 0600)
 }

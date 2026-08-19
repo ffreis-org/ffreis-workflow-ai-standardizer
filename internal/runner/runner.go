@@ -169,7 +169,7 @@ func processRepoEntry(
 	}
 
 	repoURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, name)
-	if err := cloneRepo(repoURL, tmpDir); err != nil {
+	if err := cloneRepo(ctx, repoURL, tmpDir); err != nil {
 		opts.Logger.Warn("clone failed", "repo", repoEntry.Repo, "error", err)
 		return []Result{{Repo: repoEntry.Repo, Status: "error", Detail: "clone failed: " + err.Error()}}, tmpDir, err
 	}
@@ -211,7 +211,7 @@ func processRepo(ctx context.Context, opts Options, p processRepoParams) Result 
 	logger := opts.Logger.With("repo", p.repoEntry.Repo, "task", p.task.Name)
 
 	builder := gocontext.NewBuilder(p.repoDir, p.owner, p.name, logger)
-	data, err := builder.Build(p.task.Context, p.task.SourceGlobs, p.task.MaxDiffTokens)
+	data, err := builder.Build(ctx, p.task.Context, p.task.SourceGlobs, p.task.MaxDiffTokens)
 	if err != nil {
 		return Result{Repo: base.Repo, Task: base.Task, Status: "error", Detail: "context: " + err.Error()}
 	}

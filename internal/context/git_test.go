@@ -1,6 +1,7 @@
 package context
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -95,7 +96,7 @@ func FuzzRepoURL(f *testing.F) {
 // TestClone_RejectsInvalidURLBeforeExec confirms the allowlist short-circuits
 // before reaching exec.Command, so a malicious URL never becomes argv at all.
 func TestCloneRejectsInvalidURLBeforeExec(t *testing.T) {
-	err := Clone("-upload-pack=touch /tmp/owned", t.TempDir())
+	err := Clone(context.Background(), "-upload-pack=touch /tmp/owned", t.TempDir())
 	if err == nil {
 		t.Fatal("Clone accepted a leading-dash repoURL; allowlist did not fire")
 	}

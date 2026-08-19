@@ -54,6 +54,31 @@ or locally inside a repo's own CI pipeline.
   the network. Keep this pattern for any future external-process call site
   you want to unit test.
 
+- **`GITHUB_REPOSITORY` and `GITHUB_STEP_SUMMARY` are ambient in every GitHub
+  Actions job.** A test asserting "no env fallback" for local-mode repo-slug
+  resolution must `t.Setenv("GITHUB_REPOSITORY", "")` explicitly — otherwise it
+  passes locally (where the var is unset) and fails only in CI, where the
+  runner injects the real value. `internal/runner.runLocalMode` and
+  `cmd/standardizer.writeStepSummary` both read these two vars directly via
+  `os.Getenv`.
+
+- **All `exec.Command`/`exec.CommandContext` call sites take a `context.Context`
+  first param** (`internal/context.Clone`, `Builder.run`, `Builder.directoryTree`)
+  so a caller-provided deadline/cancellation can abort a hung git/find
+  subprocess. `internal/context` is itself a package named `context`, so files
+  in it that need the stdlib package alias it (`stdctx "context"`); test files
+  in the same package can import it unaliased since there's no self-referencing
+  identifier to collide with.
+
+- **`.golangci.yml` excludes gosec G304 (file inclusion via variable) and G204
+  (subprocess launched with variable) repo-wide**, not with inline `#nosec`
+  comments — every instance is a CLI-flag-supplied config/task path or an
+  internally-built `git`/`find` argv (never shell-string, never network input).
+  See the config's inline comment for the full file list before extending the
+  exclusion to new code; if a future finding involves genuinely
+  externally-controlled input, fix that one properly instead of assuming the
+  blanket exclusion covers it.
+
 ## Structure
 
 ```

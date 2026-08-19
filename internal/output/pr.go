@@ -41,7 +41,9 @@ func (h *PRHandler) CreatePR(
 
 	// Write updated AGENTS.md.
 	agentsPath := filepath.Join(repoDir, "AGENTS.md")
-	if err := os.WriteFile(agentsPath, []byte(updatedContent), 0644); err != nil {
+	// scan-fix(gosec:G306): 0600 — AGENTS.md is about to be committed anyway;
+	// no reason for the working copy to be group/other readable in the interim.
+	if err := os.WriteFile(agentsPath, []byte(updatedContent), 0600); err != nil {
 		return "", fmt.Errorf("write AGENTS.md: %w", err)
 	}
 
