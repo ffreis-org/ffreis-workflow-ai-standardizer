@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/compare/v1.0.2...v1.1.0) (2026-08-19)
+
+
+### Features
+
+* **run:** exit non-zero on error results and write step summary ([#31](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/issues/31)) ([c373a85](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/commit/c373a85209f87851ae42a13289e20daa55bd472a))
+
+
+### Bug Fixes
+
+* **grype:** bump workflows-general SHA to prevent self-scan CVEs ([#30](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/issues/30)) ([a95d393](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/commit/a95d3939645612660288b567e47f4cce3fa52a7e))
+* resolve SonarQube issues ([#35](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/issues/35)) ([09fa511](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/commit/09fa5114e6905701f9854f11ce0098249cae24e0))
+* restore internal/output build + adopt coverage-floor v1.3.0 ([#50](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/issues/50)) ([c39f4b9](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/commit/c39f4b9200fbcc2b9ed29555d04d5ff69aeb9723))
+* update stale repo owner in fleet inventory config entry ([#49](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/issues/49)) ([79b3b90](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/commit/79b3b903dd124581738d892f59574ac1627eb8a5))
+
 ## [1.0.2](https://github.com/FelipeFuhr/ffreis-workflow-ai-standardizer/compare/v1.0.1...v1.0.2) (2026-05-26)
 
 
